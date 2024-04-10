@@ -2,6 +2,8 @@
 The turtle_adventure module maintains all classes related to the Turtle's
 adventure game.
 """
+from math import cos, sin, radians, degrees, atan2
+from random import randint
 from turtle import RawTurtle
 from gamelib import Game, GameElement
 
@@ -248,9 +250,50 @@ class Enemy(TurtleGameElement):
 # * Define enemy's update logic in the update() method
 # * Check whether the player hits this enemy, then call the
 #   self.game.game_over_lose() method in the TurtleAdventureGame class.
-class DemoEnemy(Enemy):
+class RandomWalkEnemy(Enemy):
     """
-    Demo enemy
+    Enemy that walks randomly.
+    """
+
+    def __init__(self,
+                 game: "TurtleAdventureGame",
+                 size: int,
+                 color: str):
+        super().__init__(game, size, color)
+        self.angle = randint(0, 360)  # Random direction in degrees
+        self.counter = 0  # Counter for updates
+
+    def create(self) -> None:
+        self.__id = self.canvas.create_oval(0, 0, 0, 0, fill="red")
+
+    def update(self) -> None:
+        speed = 7
+        self.x += speed * cos(radians(self.angle))
+        self.y += speed * sin(radians(self.angle))
+        self.x = max(0, min(self.x, 800))
+        self.y = max(0, min(self.y, 500))
+        if self.hits_player():
+            self.game.game_over_lose()
+
+        self.counter += 1
+        if self.counter >= 60 * 0.25:
+            self.angle = randint(0, 360)
+            self.counter = 0
+
+    def render(self) -> None:
+        self.canvas.coords(self.__id,
+                           self.x - self.size/2,
+                           self.y - self.size/2,
+                           self.x + self.size/2,
+                           self.y + self.size/2)
+
+    def delete(self) -> None:
+        pass
+
+
+class ChasingEnemy(Enemy):
+    """
+    Enemy that chases the player.
     """
 
     def __init__(self,
@@ -260,17 +303,76 @@ class DemoEnemy(Enemy):
         super().__init__(game, size, color)
 
     def create(self) -> None:
-        pass
+        self.__id = self.canvas.create_oval(0, 0, 0, 0, fill="blue")
 
     def update(self) -> None:
-        pass
+        speed = 3
+        player = self.game.player
+        angle = self.angle_to(player.x, player.y)
+        self.x += speed * cos(radians(angle))
+        self.y += speed * sin(radians(angle))
+        if self.hits_player():
+            self.game.game_over_lose()
 
     def render(self) -> None:
-        pass
+        self.canvas.coords(self.__id,
+                           self.x - self.size/2,
+                           self.y - self.size/2,
+                           self.x + self.size/2,
+                           self.y + self.size/2)
 
     def delete(self) -> None:
         pass
 
+    def angle_to(self, x: float, y: float) -> float:
+        """
+        Calculate the angle from the enemy to the given point (x, y)
+        """
+        dx = x - self.x
+        dy = y - self.y
+        return (360 + degrees(atan2(dy, dx))) % 360
+
+
+class FencingEnemy(Enemy):
+    """
+    Enemy that moves around the player's home.
+    """
+    
+    def __init__(self, game: "TurtleAdventureGame", size: int, color: str):
+        super().__init__(game, size, color)
+        self.angle = randint(0, 360)  # Random direction in degrees
+        self.counter = 0  # Counter for updates
+        self.home_x, self.home_y = game.home.x, game.home.y  # Get home coordinates from game
+        self.radius = 50  # Radius of circular path around home
+
+    def create(self) -> None:
+        self.__id = self.canvas.create_oval(0, 0, 0, 0, fill="yellow")
+
+    def update(self) -> None:
+        speed = 5  # Adjust as needed
+        self.angle = (self.angle + speed) % 360  # Update angle
+        self.x = self.home_x + self.radius * cos(radians(self.angle))
+        self.y = self.home_y + self.radius * sin(radians(self.angle))
+        if self.hits_player():
+            self.game.game_over_lose()
+
+    def render(self) -> None:
+        self.canvas.coords(self.__id,
+                        self.x - self.size/2,
+                        self.y - self.size/2,
+                        self.x + self.size/2,
+                        self.y + self.size/2)
+
+    def delete(self) -> None:
+        pass
+
+    def angle_to(self, x: float, y: float) -> float:
+        """
+        Calculate the angle from the enemy to the given point (x, y)
+        """
+        dx = x - self.x
+        dy = y - self.y
+        return (360 + degrees(atan2(dy, dx))) % 360
 
 # TODO
 # Complete the EnemyGenerator class by inserting code to generate enemies
@@ -311,10 +413,18 @@ class EnemyGenerator:
         """
         Create a new enemy, possibly based on the game level
         """
-        new_enemy = DemoEnemy(self.__game, 20, "red")
-        new_enemy.x = 100
-        new_enemy.y = 100
-        self.game.add_element(new_enemy)
+        rw = RandomWalkEnemy(self.__game, 20, "red")
+        cs = ChasingEnemy(self.__game, 20, "blue")
+        fc = FencingEnemy(self.__game, 20, "yellow")
+        rw.x = randint(100, 700)
+        rw.y = randint(100, 400)
+        cs.x = randint(100, 700)
+        cs.y = randint(100, 400)
+        fc.x = randint(100, 700)
+        fc.y = randint(100, 400)
+        self.game.add_element(rw)
+        self.game.add_element(cs)
+        self.game.add_element(fc)
 
 
 class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
