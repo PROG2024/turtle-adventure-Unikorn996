@@ -340,21 +340,44 @@ class FencingEnemy(Enemy):
     
     def __init__(self, game: "TurtleAdventureGame", size: int, color: str):
         super().__init__(game, size, color)
-        self.angle = randint(0, 360)  # Random direction in degrees
-        self.counter = 0  # Counter for updates
-        self.home_x, self.home_y = game.home.x, game.home.y  # Get home coordinates from game
-        self.radius = 50  # Radius of circular path around home
+        self.__game = game
+        self.angle = 0 
+        self.counter = 0
+        self.home_x, self.home_y = game.home.x, game.home.y
+        self.radius = 50
+        self.x = self.home_x - self.radius
+        self.y = self.home_y - self.radius
 
     def create(self) -> None:
         self.__id = self.canvas.create_oval(0, 0, 0, 0, fill="yellow")
 
     def update(self) -> None:
-        speed = 5  # Adjust as needed
-        self.angle = (self.angle + speed) % 360  # Update angle
-        self.x = self.home_x + self.radius * cos(radians(self.angle))
-        self.y = self.home_y + self.radius * sin(radians(self.angle))
+        speed = 3
+
         if self.hits_player():
-            self.game.game_over_lose()
+            self.__game.game_over_lose()
+
+        # Update x and y coordinates based on current angle
+        if self.angle == 0:
+            self.x += speed
+            if self.x > self.home_x + self.radius:
+                self.angle = 90
+                self.y += speed
+        elif self.angle == 90:
+            self.y += speed
+            if self.y > self.home_y + self.radius:
+                self.angle = 180
+                self.x -= speed
+        elif self.angle == 180:
+            self.x -= speed
+            if self.x < self.home_x - self.radius:
+                self.angle = 270
+                self.y -= speed
+        elif self.angle == 270:
+            self.y -= speed
+            if self.y < self.home_y - self.radius:
+                self.angle = 0
+                self.x += speed
 
     def render(self) -> None:
         self.canvas.coords(self.__id,
@@ -366,13 +389,6 @@ class FencingEnemy(Enemy):
     def delete(self) -> None:
         pass
 
-    def angle_to(self, x: float, y: float) -> float:
-        """
-        Calculate the angle from the enemy to the given point (x, y)
-        """
-        dx = x - self.x
-        dy = y - self.y
-        return (360 + degrees(atan2(dy, dx))) % 360
 
 # TODO
 # Complete the EnemyGenerator class by inserting code to generate enemies
@@ -420,8 +436,8 @@ class EnemyGenerator:
         rw.y = randint(100, 400)
         cs.x = randint(100, 700)
         cs.y = randint(100, 400)
-        fc.x = randint(100, 700)
-        fc.y = randint(100, 400)
+        fc.x = self.__game.home.x - 50
+        fc.y = self.__game.home.y - 50
         self.game.add_element(rw)
         self.game.add_element(cs)
         self.game.add_element(fc)
