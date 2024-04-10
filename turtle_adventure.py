@@ -390,6 +390,39 @@ class FencingEnemy(Enemy):
         pass
 
 
+class TeleportingEnemy(Enemy):
+    """
+    Enemy that teleports to a random location.
+    """
+    
+    def __init__(self, game: "TurtleAdventureGame", size: int, color: str):
+        super().__init__(game, size, color)
+        self.__game = game
+        self.counter = 0
+
+    def create(self) -> None:
+        self.__id = self.canvas.create_oval(0, 0, 0, 0, fill="purple")
+
+    def update(self) -> None:
+        if self.hits_player():
+            self.__game.game_over_lose()
+
+        self.counter += 1  # Increment the counter
+        if self.counter >= 20:  # Only teleport every 10 updates
+            self.x = randint(0, 800)
+            self.y = randint(0, 500)
+            self.counter = 0
+
+    def render(self) -> None:
+        self.canvas.coords(self.__id,
+                        self.x - self.size/2,
+                        self.y - self.size/2,
+                        self.x + self.size/2,
+                        self.y + self.size/2)
+
+    def delete(self) -> None:
+        pass
+
 # TODO
 # Complete the EnemyGenerator class by inserting code to generate enemies
 # based on the given game level; call TurtleAdventureGame's add_enemy() method
@@ -432,15 +465,20 @@ class EnemyGenerator:
         rw = RandomWalkEnemy(self.__game, 20, "red")
         cs = ChasingEnemy(self.__game, 20, "blue")
         fc = FencingEnemy(self.__game, 20, "yellow")
+        tp = TeleportingEnemy(self.__game, 20, "purple")
         rw.x = randint(100, 700)
         rw.y = randint(100, 400)
         cs.x = randint(100, 700)
         cs.y = randint(100, 400)
         fc.x = self.__game.home.x - 50
         fc.y = self.__game.home.y - 50
+        tp.x = randint(100, 700)
+        tp.y = randint(100, 400)
         self.game.add_element(rw)
         self.game.add_element(cs)
         self.game.add_element(fc)
+        self.game.add_element(tp)
+            
 
 
 class TurtleAdventureGame(Game): # pylint: disable=too-many-ancestors
